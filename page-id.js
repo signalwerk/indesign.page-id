@@ -9,7 +9,7 @@ var textBox = {
   pointSize: 6,
 };
 
-var ProgressBar = function (/*str*/ title) {
+function ProgressBar(title) {
   var w = new Window("palette", " " + title, {
       x: 0,
       y: 0,
@@ -36,74 +36,36 @@ var ProgressBar = function (/*str*/ title) {
   this.close = function () {
     w.close();
   };
-};
-
-try {
-  Object.defineProperty({}, "a", { value: 0 });
-} catch (err) {
-  // failed: so we're in IE8
-  (function () {
-    var defineProperty = Object.defineProperty;
-    Object.defineProperty = function (object, property, descriptor) {
-      delete descriptor.configurable;
-      delete descriptor.enumerable;
-      delete descriptor.writable;
-      try {
-        return defineProperty(object, property, descriptor);
-      } catch (err) {
-        object[property] = descriptor.value;
-      }
-    };
-  })();
 }
 
-Object.defineProperties ||
-  (Object.defineProperties = function defineProperties(object, descriptors) {
-    var property;
-    for (property in descriptors) {
-      Object.defineProperty(object, property, descriptors[property]);
-    }
-    return object;
-  });
-
-if (!String.prototype.startsWith) {
-  Object.defineProperty(String.prototype, "startsWith", {
-    value: function (search, rawPos) {
-      var pos = rawPos > 0 ? rawPos | 0 : 0;
-      return this.substring(pos, pos + search.length) === search;
-    },
-  });
+function trim(string) {
+  // Make sure we trim BOM and NBSP
+  var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+  return string.replace(rtrim, "");
 }
 
-if (!String.prototype.trim) {
-  (function () {
-    // Make sure we trim BOM and NBSP
-    var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
-    String.prototype.trim = function () {
-      return this.replace(rtrim, "");
-    };
-  })();
+function find(arr, callback) {
+  if (arr === null) {
+    throw new TypeError("find called on null or undefined");
+  } else if (typeof callback !== "function") {
+    throw new TypeError("callback must be a function");
+  }
+  var list = Object(arr);
+  // Makes sures is always has an positive integer as length.
+  var length = list.length >>> 0;
+  var thisArg = arguments[1];
+  for (var i = 0; i < length; i++) {
+    var element = list[i];
+    if (callback.call(thisArg, element, i, list)) {
+      return element;
+    }
+  }
 }
 
-Array.prototype.find =
-  Array.prototype.find ||
-  function (callback) {
-    if (this === null) {
-      throw new TypeError("Array.prototype.find called on null or undefined");
-    } else if (typeof callback !== "function") {
-      throw new TypeError("callback must be a function");
-    }
-    var list = Object(this);
-    // Makes sures is always has an positive integer as length.
-    var length = list.length >>> 0;
-    var thisArg = arguments[1];
-    for (var i = 0; i < length; i++) {
-      var element = list[i];
-      if (callback.call(thisArg, element, i, list)) {
-        return element;
-      }
-    }
-  };
+function startsWith(str, search, rawPos) {
+  var pos = rawPos > 0 ? rawPos | 0 : 0;
+  return str.substring(pos, pos + search.length) === search;
+}
 
 function getUID(len) {
   var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
@@ -114,14 +76,6 @@ function getUID(len) {
   }
 
   return out;
-}
-
-function keys(obj) {
-  var keys = [];
-  for (var key in obj) {
-    keys.push(key);
-  }
-  return keys;
 }
 
 function getByLabel(page, label) {
@@ -180,8 +134,8 @@ function run() {
   layer.locked = false;
 
   var myFonts = app.fonts.everyItem().getElements();
-  var myFontStyles = myFonts.find(function (font) {
-    return font.name.startsWith("Myriad");
+  var myFontStyles = find(myFonts, function (font) {
+    return startsWith(font.name, "Myriad");
   });
   var pages = doc.pages;
 
@@ -208,12 +162,12 @@ function run() {
       var text = textframe.contents;
 
       if (regexpID.test(text)) {
-        id = text.match(regexpID)[1].trim();
+        id = trim(text.match(regexpID)[1]);
       }
 
       if (
         !id ||
-        ids.find(function (item) {
+        find(ids, function (item) {
           return item === id;
         })
       ) {
@@ -229,6 +183,7 @@ function run() {
     ids.push(id);
   }
   pBar.close();
+  layer.locked = true;
 
   var docRef = app.activeDocument;
   var win = new Window("dialog", "Page order");
